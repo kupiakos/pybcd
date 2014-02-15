@@ -1,0 +1,98 @@
+
+devices:
+littleendian dword at index 28 is the disk id
+same as bigendian dword at index 0x1B8
+
+
+ramdisks:
+device index 34 to 70 equals ramdiskoptions 8 to end
+
+
+
+devicetype: (0=file, 5=boot, 6=partition, 8=vhd/locate?)
+tabletype: (0=gpt, 1=mbr)
+size: number of bytes from devicetype to end (48 for 5,6)
+
+(size: 16)
+union partitionid
+{
+    qword offset (partition offset in disk in bytes) - mbr only
+    guid guid - gpt only
+}
+
+(size: 16)
+union diskid
+{
+    dword id (index in MBR disk at 0x1B8) - mbr only
+    guid guid - gpt only
+}
+
+(start here)
+struct deviceentry
+{
+    guid optionsid (i.e. for {ramdiskoptions} in a ramdisk entry)
+    packet packet
+}
+
+struct packet
+{
+    dword type (wtf knows anymore)
+    dword u1 (possibly isramdisk)
+    dword size - from start of packet
+    dword u2
+    union data
+    {
+        char[64] boot - blank
+        diskpartition partition
+        packet diskfile
+        packet vhddisk
+        packet vhddiskfile
+    }
+}
+
+
+struct diskpartition
+{
+    partitionid partid
+    dword u3
+    dword tabletype
+    diskid diskid
+    dword[4] u4
+    # char[7] u4
+}
+
+struct diskfile
+{
+    dword u5 (ramdisk=0, file=5, vhd=6)
+    dword u6 (1)
+    dword u7 (size? (exclude first dword) (146))
+    dword u8 (5)
+    packet partpacket
+    wcstr path
+}
+
+
+struct ramdisk
+{
+    dword[5] u9
+    packet partpacket
+    wcstr path
+}
+
+struct vhddisk
+{
+    dword u10 (0)
+    dword locatecustom
+    dword u11 (0x1E)
+    short u12
+    packet vhddiskfile
+}
+
+struct vhddiskfile
+{
+    dword u13 (6)
+    dword[5] u14
+    packet diskfile
+}
+
+END OF LINE.

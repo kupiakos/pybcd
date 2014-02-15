@@ -1,0 +1,30 @@
+== pybcd ==
+
+Alright, so it's not quite finished yet, but this here is PyBCD, a BCD library
+and bcdedit replacement. It's pretty good so far.
+
+You need the hivex python library to use this. It's all Python3.
+
+Things not implemented (yet):
+ - Dynamic Disks (honestly, who uses these? still, I'll get it in eventually)
+ - Write support (yeah, that one's in the books)
+ 
+Since the BCD format is pretty much undocumented (even by Microsoft), I've
+reverse engineered the majority of it. Fortunately, the BCD is actually a
+registry hive and somebody's already written a library for that - hivex.
+What was needed was the numeric formats matching with their friendly names,
+some fancy Python magic, and the worst of all - reverse engineering the
+binary format that's used to designate devices. analyze/ contains some of my
+notes and programmatic generators for all of that.
+
+test/ contains some sample BCDs I used for testing. These were generated with
+bcdedit.
+
+To run a bcdedit clone, just run python3 bcdedit (depending on your python 
+setup)
+
+Unless otherwise stated, everything here's under the MIT license.
+
+ - Kevin Haroldsen
+
+P.S. If you're from MIT, hi!

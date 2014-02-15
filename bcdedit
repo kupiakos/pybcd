@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import time
+import argparse
+
+if sys.version_info.major < 3:
+    #sys.stderr.write('This program requires Python 3.0 or higher to run!\n')
+    raise Exception('This program requires Python 3.0 or higher to run!\n')
+
+from common import *
+
+try:
+    import hivex
+    import libhivexmod
+except ImportError:
+    raise ImportError('The hivex library is required to run this program!')
+
+from bcd import BCD
+from devicelocate import scan_devices
+
+
+
+class UsageParser(argparse.ArgumentParser):
+    def error(self, message):
+        printerror('error: %s\n' % message)
+        self.print_help()
+        sys.exit(2)
+
+
+
+def find_default_store():
+    raise NotImplementedError('Default Stores have not been figured out yet.')
+
+#choices=['active', 'firmware', 'bootapp', 'bootmgr',
+#         'osloader', 'resume', 'inherit', 'all'], 
+
+def enum(args):
+    try:
+        b = BCD(args.store)
+    except FileNotFoundError as e:
+        printerror(e)
+        sys.exit(1)
+    except IOError as e:
+        printerror(e)
+        sys.exit(2)
+    
+    args.type = args.type.lower()
+    
+    if args.type == 'all':
+        b.dump(verbose=args.verbose)
+        return
+    
+    scan_devices()
+    
+    if args.type == 'active':
+        try:
+            b.bootmgr.dump(verbose=args.verbose)
+            try:
+                for o in b.bootmgr.displayorder:
+                    b[o].dump(verbose=args.verbose)
+            except AttributeError:
+                printwarn('The boot manager has no displayed OS Loaders')
+        except AttributeError:
+            printerror('Could not find a boot manager')
+    elif args.type == 'firmware':
+        for o in b:
+            if o._type == 0x101fffff:
+                o.dump(verbose=args.verbose)
+    elif args.type == 'bootmgr':
+        try:
+            b.bootmgr.dump(verbose=args.verbose)
+        except AttributeError:
+            printerror('Could not find a boot manager')
+    elif args.type == 'osloader':
+        for o in b:
+            if o._type_info[::2] == (1, 3):
+                o.dump(verbose=args.verbose)
+    elif args.type == 'resume':
+        for o in b:
+            if o._type_info[::2] == (1, 4):
+                o.dump(verbose=args.verbose)
+    elif args.type == 'inherit':
+        for o in b:
+            if o._type_info[0] == 2:
+                o.dump(verbose=args.verbose)
+    else:
+        try:
+            b[args.type].dump(verbose=args.verbose)
+        except AttributeError:
+            printerror('No object with ID "%s" found' % args.type)
+            
+
+def main():
+    global COLORS_ENABLED
+    
+    globalargs = argparse.ArgumentParser(add_help=False)
+    globalargs.add_argument('-color', help='How to color the output: auto, on, or off.', default='auto',
+                    metavar='COLOR', choices=['auto', 'on', 'off'])
+    globalargs.add_argument('-store', metavar='FILE', type=str, 
+                    help='The BCD Store to view/manipulate',
+                    required=(not sys.platform.startswith('windows')))
+    globalargs.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False,
+                    help='List as much information as possible, expanding well-known guids')
+    
+    
+    parser = UsageParser(description='A BCD Editor for Linux and Windows',
+                         prefix_chars='-/', parents=[globalargs])
+    
+                    
+    parser.set_defaults(func=enum, type='active', verbose=False)
+    
+    sub = parser.add_subparsers()
+    
+    ## ENUM ##
+    
+    sub_enum = sub.add_parser('enum', 
+                    help='Enumerate entries in the store',
+                    parents=[globalargs], )
+    sub_enum.add_argument('type', metavar='<type>', default='active',
+                    help='The type or id of the entry to enumerate', nargs='?')
+    sub_enum.set_defaults(func=enum)
+    
+    ##########
+    
+    args = parser.parse_args()
+    if not args:
+        args.store = find_default_store()
+        
+    if args.color == 'off':
+        color_disable()
+    elif args.color == 'on':
+        color_enable()
+        
+    args.func(args)
+    
+
+
+
+if __name__ == '__main__':
+    main()
+
+# END OF LINE.
