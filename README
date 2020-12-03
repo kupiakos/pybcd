@@ -24,7 +24,3 @@ To run a bcdedit clone, just run python3 bcdedit (depending on your python
 setup)
 
 Unless otherwise stated, everything here's under the MIT license.
-
- - Kevin Haroldsen
-
-P.S. If you're from MIT, hi!
